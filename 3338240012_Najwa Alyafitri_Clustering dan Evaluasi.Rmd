@@ -1,0 +1,192 @@
+---
+title: "Analisis Clustering Menggunakan Metode K-Means pada Dataset Breast Cancer
+  Wisconsin Diagnostic"
+author: "NAJWA ALYAFITRI (3338240012)"
+date: "2026-06-01"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+# Pendahuluan
+
+Clustering merupakan salah satu metode unsupervised learning yang digunakan untuk mengelompokkan objek berdasarkan tingkat kemiripan karakteristik yang dimiliki. Pada penelitian ini digunakan metode K-Means Clustering untuk mengelompokkan data Breast Cancer Wisconsin Diagnostic yang diperoleh dari UCI Machine Learning Repository.
+
+Dataset Breast Cancer Wisconsin Diagnostic terdiri dari sejumlah pengamatan dengan 30 variabel numerik yang menggambarkan karakteristik sel kanker payudara. Tujuan analisis ini adalah mengidentifikasi kelompok data yang memiliki karakteristik serupa berdasarkan variabel-variabel tersebut.
+
+# Import Package
+
+```{r}
+library(readxl)
+library(factoextra)
+library(cluster)
+```
+
+# Import Data
+
+```{r}
+data <- read_excel("C:/Users/HP/OneDrive - untirta.ac.id/MECHINE LEARNING/wdbc.xlsx", col_names = FALSE)
+
+head(data)
+dim(data)
+```
+
+## Interpretasi
+
+Dataset berhasil diimpor ke dalam R. Data terdiri atas beberapa observasi dengan 32 kolom, dimana kolom pertama merupakan ID, kolom kedua merupakan diagnosis, dan kolom ketiga hingga kolom ke-32 merupakan variabel numerik yang akan digunakan dalam proses clustering.
+
+# Pemilihan Variabel Clustering
+
+```{r}
+data.clust <- data[,3:32]
+
+data.clust <- data.frame(
+  lapply(data.clust, as.numeric)
+)
+
+str(data.clust)
+```
+
+## Interpretasi
+
+Pada tahap ini hanya digunakan variabel numerik yang terdapat pada kolom ketiga hingga kolom ke-32. Kolom ID dan diagnosis tidak digunakan karena bukan merupakan variabel yang berperan dalam pembentukan cluster.
+
+# Scaling Data
+
+```{r}
+data.scale <- scale(data.clust)
+
+head(data.scale)
+```
+
+## Interpretasi
+
+Scaling dilakukan untuk menyamakan skala antar variabel sehingga setiap variabel memiliki kontribusi yang seimbang dalam proses clustering. Tahapan ini penting karena rentang nilai antar variabel pada dataset cukup berbeda.
+
+# Menentukan Jumlah Cluster dengan Elbow Method
+
+```{r}
+set.seed(123)
+
+fviz_nbclust(
+  data.scale,
+  kmeans,
+  method = "wss"
+) +
+  labs(
+    title = "Elbow Method"
+  )
+```
+
+## Interpretasi
+
+Berdasarkan grafik Elbow Method, terlihat bahwa nilai Total Within Sum of Squares (WSS) mengalami penurunan yang cukup besar ketika jumlah cluster meningkat dari k = 1 menjadi k = 2. Setelah titik tersebut, laju penurunan WSS mulai melambat sehingga penambahan cluster tidak lagi memberikan peningkatan kualitas pengelompokan yang berarti.
+
+Kondisi ini menunjukkan bahwa sebagian besar variasi dalam data sudah dapat dijelaskan dengan baik oleh dua cluster. Oleh karena itu, jumlah cluster optimal dipilih sebanyak 2 cluster karena mampu memberikan keseimbangan antara kualitas pengelompokan dan kesederhanaan model. Pemilihan jumlah cluster yang tepat penting untuk menghindari pembentukan cluster yang terlalu banyak namun tidak memberikan informasi tambahan yang signifikan.
+
+# K-Means Clustering
+
+```{r}
+set.seed(123)
+
+km <- kmeans(
+  data.scale,
+  centers = 2,
+  nstart = 25
+)
+
+km
+```
+
+## Interpretasi
+
+Metode K-Means diterapkan dengan menggunakan jumlah cluster optimal sebanyak 2 cluster berdasarkan hasil Elbow Method. Algoritma ini bekerja dengan mengelompokkan observasi yang memiliki karakteristik serupa ke dalam cluster yang sama berdasarkan jarak terhadap pusat cluster (centroid).
+
+Hasil clustering menunjukkan bahwa data Breast Cancer Wisconsin Diagnostic memiliki pola pengelompokan alami yang dapat dipisahkan menjadi dua kelompok utama. Pengelompokan ini mengindikasikan adanya perbedaan karakteristik antar kelompok observasi sehingga objek dalam satu cluster cenderung lebih homogen dibandingkan dengan objek pada cluster lainnya. Dengan demikian, metode K-Means mampu menangkap struktur dasar yang terdapat dalam data dan menyederhanakan proses analisis terhadap dataset yang memiliki banyak variabel.
+
+# Jumlah Anggota Tiap Cluster
+
+```{r}
+km$size
+```
+
+## Interpretasi
+
+Hasil clustering menunjukkan bahwa Cluster 1 terdiri dari 191 observasi, sedangkan Cluster 2 terdiri dari 378 observasi. Perbedaan jumlah anggota ini menunjukkan bahwa distribusi data tidak sepenuhnya seimbang, di mana sebagian besar observasi terkonsentrasi pada Cluster 2.
+
+Ketidakseimbangan jumlah anggota cluster merupakan hal yang umum terjadi dalam proses clustering karena pembentukan kelompok didasarkan pada tingkat kemiripan karakteristik data, bukan pada pemerataan jumlah anggota. Kondisi ini mengindikasikan bahwa karakteristik yang direpresentasikan oleh Cluster 2 lebih banyak ditemukan dalam dataset dibandingkan karakteristik yang terdapat pada Cluster 1.
+
+# Visualisasi Cluster
+
+```{r}
+fviz_cluster(
+  km,
+  data = data.scale,
+  ellipse.type = "convex",
+  ggtheme = theme_minimal()
+)
+```
+
+## Interpretasi
+
+Visualisasi menunjukkan data terbagi menjadi dua cluster yang relatif terpisah. Hal ini mengindikasikan bahwa observasi dalam masing-masing cluster memiliki karakteristik yang lebih mirip satu sama lain dibandingkan dengan observasi pada cluster lainnya. Pemisahan yang cukup jelas tersebut menunjukkan bahwa metode K-Means berhasil menangkap struktur pengelompokan yang terdapat dalam data.
+
+# Evaluasi Cluster Menggunakan Silhouette
+
+```{r}
+sil <- silhouette(
+  km$cluster,
+  dist(data.scale)
+)
+
+fviz_silhouette(sil)
+```
+
+## Interpretasi
+
+Silhouette digunakan untuk mengevaluasi kualitas cluster yang terbentuk. Semakin tinggi nilai silhouette suatu observasi, maka semakin baik kesesuaian observasi tersebut terhadap cluster tempatnya berada dan semakin jauh dari cluster lainnya.
+
+# Nilai Rata-rata Silhouette
+
+```{r}
+mean_sil <- mean(sil[,3])
+
+mean_sil
+```
+
+## Interpretasi
+
+Nilai rata-rata silhouette digunakan untuk mengevaluasi kualitas keseluruhan hasil clustering yang telah terbentuk. Semakin tinggi nilai rata-rata silhouette, maka semakin baik tingkat homogenitas anggota dalam suatu cluster dan semakin jelas perbedaan karakteristik antar cluster.
+
+- Nilai silhouette > 0,70 menunjukkan kualitas cluster sangat baik dengan pemisahan antar cluster yang sangat jelas.
+- Nilai silhouette 0,50–0,70 menunjukkan kualitas cluster baik dan struktur cluster cukup kuat.
+- Nilai silhouette 0,25–0,50 menunjukkan kualitas cluster sedang sehingga masih terdapat beberapa observasi yang berada di area perbatasan cluster.
+- Nilai silhouette < 0,25 menunjukkan kualitas cluster kurang baik karena pemisahan antar cluster tidak terlalu jelas.
+
+Berdasarkan nilai rata-rata silhouette yang diperoleh, dapat dinilai apakah metode K-Means telah berhasil membentuk cluster yang representatif terhadap struktur data. Semakin tinggi nilai yang diperoleh, semakin baik kemampuan model dalam mengelompokkan observasi yang memiliki karakteristik serupa ke dalam cluster yang sama.
+
+# Rata-rata Variabel pada Setiap Cluster
+
+```{r}
+aggregate(
+  data.clust,
+  by = list(Cluster = km$cluster),
+  mean
+)
+```
+
+## Interpretasi
+
+Tabel rata-rata variabel pada setiap cluster memberikan gambaran mengenai karakteristik utama yang dimiliki oleh masing-masing kelompok. Nilai rata-rata tersebut dapat digunakan untuk mengidentifikasi pola serta membandingkan perbedaan karakteristik antar cluster yang terbentuk.
+
+Variabel yang memiliki perbedaan rata-rata paling besar antar cluster dapat dianggap sebagai variabel yang paling berperan dalam proses pembentukan cluster. Sebaliknya, variabel yang memiliki rata-rata relatif sama pada seluruh cluster cenderung memiliki kontribusi yang lebih kecil dalam membedakan kelompok data.
+
+Melalui perbandingan nilai rata-rata setiap variabel, dapat diperoleh pemahaman yang lebih mendalam mengenai karakteristik masing-masing cluster sehingga interpretasi hasil clustering tidak hanya berfokus pada jumlah kelompok yang terbentuk, tetapi juga pada ciri khas yang membedakan setiap kelompok tersebut.
+
+# Kesimpulan
+
+Berdasarkan hasil analisis K-Means Clustering pada dataset Breast Cancer Wisconsin Diagnostic, diperoleh jumlah cluster optimal sebanyak 2 cluster berdasarkan metode Elbow. Hasil tersebut menunjukkan bahwa struktur data secara alami dapat dikelompokkan ke dalam dua kelompok utama berdasarkan kemiripan karakteristik yang dimiliki setiap observasi.
+
+Proses clustering berhasil mengelompokkan seluruh observasi ke dalam dua cluster dengan karakteristik yang berbeda. Visualisasi hasil clustering menunjukkan adanya pemisahan kelompok yang cukup jelas, sedangkan evaluasi menggunakan Silhouette Coefficient digunakan untuk mengukur kualitas pengelompokan yang terbentuk. Nilai silhouette yang diperoleh menunjukkan sejauh mana observasi memiliki kesesuaian dengan cluster tempatnya berada serta perbedaan terhadap cluster lainnya.
+
+Analisis rata-rata variabel pada masing-masing cluster menunjukkan bahwa setiap cluster memiliki karakteristik yang berbeda sehingga pengelompokan yang terbentuk tidak terjadi secara acak. Dengan demikian, metode K-Means mampu mengidentifikasi pola dan struktur yang terdapat dalam data Breast Cancer Wisconsin Diagnostic sehingga dapat memberikan gambaran yang lebih sederhana dan informatif mengenai karakteristik observasi yang dianalisis.
